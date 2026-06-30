@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DelovyeDela — утренний планировщик</title>
+  <meta name="description" content="Telegram-бот для утреннего планирования. Голос или текст → задачи с ИИ. Whisper + Llama + Supabase.">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html{scroll-behavior:smooth;}
+    body{
+      background:#06060e;
+      color:#fff;
+      font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;
+      overflow-x:hidden;
+      min-height:100vh;
+    }
+
+    /* ── Background orbs ── */
+    .bg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+    .orb{position:absolute;border-radius:50%;filter:blur(90px);}
+    .o1{width:700px;height:700px;top:-200px;left:-200px;
+      background:radial-gradient(circle,rgba(124,58,237,.55) 0%,transparent 65%);
+      animation:drift1 28s ease-in-out infinite alternate;}
+    .o2{width:600px;height:600px;bottom:-150px;right:-150px;
+      background:radial-gradient(circle,rgba(29,78,216,.6) 0%,transparent 65%);
+      animation:drift2 22s ease-in-out infinite alternate;}
+    .o3{width:500px;height:500px;top:35%;left:55%;
+      background:radial-gradient(circle,rgba(8,145,178,.45) 0%,transparent 65%);
+      animation:drift3 32s ease-in-out infinite alternate;}
+    .o4{width:400px;height:400px;top:60%;left:20%;
+      background:radial-gradient(circle,rgba(52,211,153,.35) 0%,transparent 65%);
+      animation:drift1 26s ease-in-out infinite alternate-reverse;}
+    @keyframes drift1{to{transform:translate(80px,60px) scale(1.12);}}
+    @keyframes drift2{to{transform:translate(-60px,-80px) scale(1.08);}}
+    @keyframes drift3{to{transform:translate(-50px,70px) scale(1.15);}}
+
+    /* ── Nav ── */
+    nav{
+      position:sticky;top:12px;
+      margin:12px 24px;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 22px;border-radius:18px;z-index:100;
+      background:rgba(255,255,255,.05);
+      backdrop-filter:blur(48px) saturate(200%);
+      -webkit-backdrop-filter:blur(48px) saturate(200%);
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 32px rgba(0,0,0,.4);
+    }
+    .logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;letter-spacing:-.3px;}
+    .logo-icon{width:34px;height:34px;border-radius:9px;
+      background:linear-gradient(140deg,#7c3aed,#2563eb);
+      display:grid;place-items:center;font-size:18px;
+      box-shadow:0 4px 12px rgba(124,58,237,.5);}
+    .nav-pill{
+      padding:8px 20px;
+      background:linear-gradient(135deg,#7c3aed,#2563eb);
+      border:none;border-radius:20px;color:#fff;
+      font-size:13px;font-weight:600;cursor:pointer;
+      text-decoration:none;display:inline-block;
+      box-shadow:0 4px 16px rgba(124,58,237,.45),inset 0 1px 0 rgba(255,255,255,.15);
+      transition:all .2s;
+    }
+    .nav-pill:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(124,58,237,.55);}
+
+    /* ── Hero ── */
+    .hero{
+      position:relative;z-index:1;
+      padding:80px 24px 0;text-align:center;
+      max-width:760px;margin:0 auto;
+    }
+    .badge{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:6px 14px;margin-bottom:24px;
+      background:rgba(124,58,237,.15);
+      border:1px solid rgba(124,58,237,.3);
+      border-radius:20px;font-size:12px;font-weight:600;
+      color:#c4b5fd;letter-spacing:.5px;text-transform:uppercase;
+    }
+    .badge-dot{width:6px;height:6px;border-radius:50%;background:#a78bfa;
+      box-shadow:0 0 8px #a78bfa;animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+    h1{
+      font-size:clamp(38px,6vw,68px);font-weight:800;
+      letter-spacing:-2.5px;line-height:1.04;margin-bottom:18px;
+    }
+    .grad-text{
+      background:linear-gradient(135deg,#c4b5fd 0%,#93c5fd 50%,#6ee7b7 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    }
+    .hero-desc{
+      font-size:18px;line-height:1.65;color:rgba(255,255,255,.55);
+      max-width:500px;margin:0 auto 40px;font-weight:400;
+    }
+    .ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+    .btn-p{
+      padding:15px 30px;
+      background:linear-gradient(135deg,#7c3aed,#2563eb);
+      border:none;border-radius:14px;color:#fff;
+      font-size:15px;font-weight:600;cursor:pointer;text-decoration:none;
+      display:inline-flex;align-items:center;gap:8px;
+      box-shadow:0 8px 28px rgba(124,58,237,.45),inset 0 1px 0 rgba(255,255,255,.15);
+      transition:all .25s;letter-spacing:-.2px;
+    }
+    .btn-p:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(124,58,237,.55);}
+    .btn-s{
+      padding:15px 30px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:14px;color:#fff;
+      font-size:15px;font-weight:500;cursor:pointer;text-decoration:none;
+      display:inline-flex;align-items:center;gap:8px;
+      backdrop-filter:blur(20px);transition:all .25s;
+    }
+    .btn-s:hover{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.18);}
+
+    /* ── Chat mockup ── */
+    .chat-wrap{
+      position:relative;z-index:1;
+      max-width:390px;margin:56px auto 0;padding:0 24px;
+    }
+    .chat-card{
+      border-radius:28px;overflow:hidden;
+      background:rgba(22,22,35,.75);
+      backdrop-filter:blur(60px) saturate(200%);
+      -webkit-backdrop-filter:blur(60px) saturate(200%);
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.12),
+        0 40px 80px rgba(0,0,0,.65),
+        0 0 0 .5px rgba(255,255,255,.04);
+    }
+    .chat-hdr{
+      padding:14px 18px;
+      border-bottom:1px solid rgba(255,255,255,.07);
+      background:rgba(255,255,255,.03);
+      display:flex;align-items:center;gap:12px;
+    }
+    .chat-av{width:38px;height:38px;border-radius:50%;
+      background:linear-gradient(140deg,#7c3aed,#2563eb);
+      display:grid;place-items:center;font-size:20px;flex-shrink:0;
+      box-shadow:0 4px 12px rgba(124,58,237,.5);}
+    .chat-av-info .nm{font-size:14px;font-weight:600;}
+    .chat-av-info .st{font-size:11px;color:#34d399;}
+    .chat-msgs{padding:14px;display:flex;flex-direction:column;gap:8px;min-height:280px;}
+    .m{max-width:84%;border-radius:18px;font-size:13.5px;line-height:1.5;
+      opacity:0;transform:translateY(6px);transition:opacity .35s ease,transform .35s ease;}
+    .m.show{opacity:1;transform:translateY(0);}
+    .m.u{align-self:flex-end;
+      background:linear-gradient(135deg,#7c3aed,#2563eb);
+      padding:10px 14px;border-bottom-right-radius:5px;
+      box-shadow:0 4px 14px rgba(124,58,237,.35);}
+    .m.b{align-self:flex-start;
+      background:rgba(255,255,255,.09);
+      border:1px solid rgba(255,255,255,.07);
+      padding:10px 14px;border-bottom-left-radius:5px;}
+    .m.voice-m{display:flex;align-items:center;gap:10px;min-width:170px;padding:10px 14px;}
+    .vplay{width:26px;height:26px;background:rgba(255,255,255,.2);
+      border-radius:50%;display:grid;place-items:center;font-size:10px;flex-shrink:0;}
+    .vbars{display:flex;align-items:center;gap:2px;height:22px;flex:1;}
+    .vb{width:3px;border-radius:2px;background:rgba(255,255,255,.75);}
+    @keyframes vw{from{transform:scaleY(.25);}to{transform:scaleY(1);}}
+    .vdur{font-size:11px;color:rgba(255,255,255,.5);}
+    .mt{font-size:10px;opacity:.35;text-align:right;margin-top:2px;}
+    .typing{display:flex;align-items:center;gap:4px;padding:10px 16px;
+      background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.07);
+      border-radius:18px;border-bottom-left-radius:5px;
+      align-self:flex-start;width:56px;opacity:0;transition:opacity .35s;}
+    .typing.show{opacity:1;}
+    .td{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.5);}
+    .td:nth-child(1){animation:tdot 1.2s .0s infinite;}
+    .td:nth-child(2){animation:tdot 1.2s .2s infinite;}
+    .td:nth-child(3){animation:tdot 1.2s .4s infinite;}
+    @keyframes tdot{0%,60%,100%{transform:translateY(0);opacity:.4;}30%{transform:translateY(-4px);opacity:1;}}
+
+    /* ── Sections ── */
+    .section{position:relative;z-index:1;padding:72px 24px;max-width:920px;margin:0 auto;}
+    .sec-tag{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+      color:#a78bfa;margin-bottom:10px;}
+    .sec-h{font-size:clamp(28px,4vw,42px);font-weight:700;letter-spacing:-1.2px;
+      line-height:1.12;margin-bottom:8px;}
+    .sec-sub{color:rgba(255,255,255,.5);font-size:16px;line-height:1.65;margin-bottom:40px;max-width:500px;}
+    .divider{position:relative;z-index:1;height:1px;margin:0 48px;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);}
+
+    /* ── Feature cards ── */
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;}
+    .fc{padding:24px;border-radius:20px;
+      background:rgba(255,255,255,.04);
+      backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 12px 30px rgba(0,0,0,.35);
+      transition:all .3s;cursor:default;position:relative;overflow:hidden;}
+    .fc::before{content:'';position:absolute;inset:0;
+      background:linear-gradient(135deg,rgba(255,255,255,.04),transparent 60%);pointer-events:none;}
+    .fc:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14);
+      transform:translateY(-3px);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 20px 50px rgba(0,0,0,.45);}
+    .fi{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;
+      font-size:23px;margin-bottom:14px;}
+    .ft{font-size:15px;font-weight:600;margin-bottom:6px;letter-spacing:-.3px;}
+    .fd{font-size:13px;line-height:1.6;color:rgba(255,255,255,.48);}
+
+    /* ── Steps ── */
+    .steps{display:flex;flex-direction:column;gap:12px;}
+    .step{display:flex;gap:18px;align-items:flex-start;padding:24px;border-radius:20px;
+      background:rgba(255,255,255,.04);
+      backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 8px 24px rgba(0,0,0,.3);
+      position:relative;overflow:hidden;transition:all .3s;}
+    .step:hover{background:rgba(255,255,255,.065);transform:translateX(4px);}
+    .step-accent{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;}
+    .sn{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
+      font-size:16px;font-weight:700;flex-shrink:0;
+      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);}
+    .sh{font-size:15px;font-weight:600;margin-bottom:5px;letter-spacing:-.2px;}
+    .sp{font-size:13.5px;color:rgba(255,255,255,.5);line-height:1.65;}
+
+    /* ── Stack badges ── */
+    .stack{display:flex;flex-wrap:wrap;gap:10px;margin-top:32px;}
+    .tag{padding:7px 14px;border-radius:20px;font-size:12px;font-weight:500;
+      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);
+      color:rgba(255,255,255,.65);}
+
+    /* ── Bottom CTA ── */
+    .bottom-cta{position:relative;z-index:1;margin:0 24px 72px;padding:56px;text-align:center;
+      border-radius:28px;
+      background:rgba(124,58,237,.1);
+      backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);
+      border:1px solid rgba(124,58,237,.22);
+      box-shadow:0 0 80px rgba(124,58,237,.12),inset 0 1px 0 rgba(255,255,255,.1),0 40px 80px rgba(0,0,0,.4);}
+    .bottom-cta h2{font-size:clamp(26px,4vw,40px);font-weight:700;letter-spacing:-1.2px;margin-bottom:12px;}
+    .bottom-cta p{color:rgba(255,255,255,.55);font-size:16px;margin-bottom:30px;}
+    .bottom-links{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+
+    ::-webkit-scrollbar{width:5px;}
+    ::-webkit-scrollbar-track{background:transparent;}
+    ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:3px;}
+  </style>
+</head>
+<body>
+
+<div class="bg">
+  <div class="orb o1"></div>
+  <div class="orb o2"></div>
+  <div class="orb o3"></div>
+  <div class="orb o4"></div>
+</div>
+
+<nav>
+  <div class="logo">
+    <div class="logo-icon">🌅</div>
+    DelovyeDela
+  </div>
+  <a href="https://t.me/deloviedela_bot" class="nav-pill" target="_blank">Открыть бота →</a>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="badge">
+    <div class="badge-dot"></div>
+    Бот работает · @deloviedela_bot
+  </div>
+  <h1>Твой&nbsp;<span class="grad-text">утренний</span><br>планировщик</h1>
+  <p class="hero-desc">Говори или пиши — бот разберёт планы на задачи с помощью ИИ и сохранит в базу. Голос распознаёт Whisper, думает Llama.</p>
+  <div class="ctas">
+    <a href="https://t.me/deloviedela_bot" class="btn-p" target="_blank">✈️&nbsp; Открыть в Telegram</a>
+    <a href="https://github.com/Henry1990new/planirovshikdel" class="btn-s" target="_blank">⌥&nbsp; Исходный код</a>
+  </div>
+</div>
+
+<!-- Chat mockup -->
+<div class="chat-wrap">
+  <div class="chat-card">
+    <div class="chat-hdr">
+      <div class="chat-av">🌅</div>
+      <div class="chat-av-info">
+        <div class="nm">DelovyeDela Bot</div>
+        <div class="st">● онлайн</div>
+      </div>
+    </div>
+    <div class="chat-msgs" id="msgs"></div>
+  </div>
+</div>
+
+<div class="divider" style="margin-top:72px;"></div>
+
+<!-- Features -->
+<div class="section">
+  <div class="sec-tag">Возможности</div>
+  <div class="sec-h">Всё что нужно,<br>без лишнего</div>
+  <div class="sec-sub">Голос или текст → задачи в базе. Никаких форм, никаких кликов.</div>
+  <div class="grid">
+    <div class="fc">
+      <div class="fi" style="background:rgba(124,58,237,.2);">🎙</div>
+      <div class="ft">Голосовой ввод</div>
+      <div class="fd">Whisper Large v3 распознаёт русскую речь с высокой точностью</div>
+    </div>
+    <div class="fc">
+      <div class="fi" style="background:rgba(37,99,235,.2);">🧠</div>
+      <div class="ft">Умный разбор</div>
+      <div class="fd">Llama 3.3 70B извлекает задачи и время из любого свободного текста</div>
+    </div>
+    <div class="fc">
+      <div class="fi" style="background:rgba(8,145,178,.2);">☁️</div>
+      <div class="ft">Облачная база</div>
+      <div class="fd">Задачи хранятся в Supabase — доступны с любого устройства</div>
+    </div>
+    <div class="fc">
+      <div class="fi" style="background:rgba(52,211,153,.2);">⚡️</div>
+      <div class="ft">Мгновенный ответ</div>
+      <div class="fd">Vercel Serverless Functions — деплой близко к тебе, низкая задержка</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Steps -->
+<div class="section">
+  <div class="sec-tag">Как работает</div>
+  <div class="sec-h">Три шага<br>до готового плана</div>
+  <div class="sec-sub">Утром — надиктовал. Днём — отмечаешь выполненное.</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-accent" style="background:linear-gradient(180deg,#7c3aed,#a78bfa);"></div>
+      <div class="sn">1</div>
+      <div>
+        <div class="sh">Надиктуй или напиши планы</div>
+        <div class="sp">«Завтра в 9:00 встреча с командой, после 14:00 в банк, вечером позвонить маме» — всё принимается в свободной форме</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-accent" style="background:linear-gradient(180deg,#2563eb,#60a5fa);"></div>
+      <div class="sn">2</div>
+      <div>
+        <div class="sh">ИИ разбивает на задачи</div>
+        <div class="sp">Llama 3.3 70B извлекает отдельные пункты с временем. Supabase сохраняет — смотри через /today в любой момент</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-accent" style="background:linear-gradient(180deg,#0891b2,#22d3ee);"></div>
+      <div class="sn">3</div>
+      <div>
+        <div class="sh">Отмечай и закрывай</div>
+        <div class="sp">/done 5 — задача выполнена. /clear — начать день заново. Никаких лишних действий.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Tech stack -->
+<div class="section">
+  <div class="sec-tag">Технологии</div>
+  <div class="sec-h">Современный стек,<br>нулевые затраты</div>
+  <div class="sec-sub">Всё на бесплатных тарифах. Код открытый.</div>
+  <div class="stack">
+    <span class="tag">TypeScript</span>
+    <span class="tag">Vercel Serverless</span>
+    <span class="tag">Groq · Whisper Large v3</span>
+    <span class="tag">Llama 3.3 70B</span>
+    <span class="tag">Supabase Postgres</span>
+    <span class="tag">Telegram Bot API</span>
+  </div>
+</div>
+
+<!-- Bottom CTA -->
+<div class="bottom-cta">
+  <h2>Начни планировать сегодня</h2>
+  <p>Бесплатно · Работает в Telegram · Без установки</p>
+  <div class="bottom-links">
+    <a href="https://t.me/deloviedela_bot" class="btn-p" target="_blank">✈️&nbsp; @deloviedela_bot</a>
+  </div>
+</div>
+
+<script>
+  const msgs=[
+    {t:'u',voice:true,delay:500},
+    {t:'b',text:'Распознаю голосовое...',delay:1300,typing:true},
+    {t:'b',text:'Распознано:\nЗавтра в 11 сходить за продуктами, потом в 15 встреча с клиентом, вечером позвонить маме',delay:3100},
+    {t:'b',text:'Добавлено 3 задачи:\n• [11:00] Сходить за продуктами\n• [15:00] Встреча с клиентом\n• Позвонить маме',delay:4600},
+    {t:'u',text:'/today',delay:6200},
+    {t:'b',text:'Задачи на сегодня (0/3):\n\n• #1 [11:00] Сходить за продуктами\n• #2 [15:00] Встреча с клиентом\n• #3 Позвонить маме',delay:7100},
+  ];
+  const times=['09:14','09:14','09:14','09:15','09:17','09:17'];
+  const container=document.getElementById('msgs');
+  let idx=0;
+
+  function fmtText(t){
+    return t.split('\n').map(l=>{
+      if(l.startsWith('•')) return `<div style="display:flex;gap:6px;align-items:flex-start;margin:2px 0"><div style="width:5px;height:5px;border-radius:50%;background:#a78bfa;margin-top:5px;flex-shrink:0"></div><span>${l.slice(1).trim()}</span></div>`;
+      return `<span>${l}</span><br>`;
+    }).join('');
+  }
+
+  function next(){
+    if(idx>=msgs.length){idx=0;container.innerHTML='';setTimeout(()=>next(),800);return;}
+    const m=msgs[idx],tc=times[idx]||'09:15';
+
+    if(m.typing&&m.t==='b'){
+      const td=document.createElement('div');
+      td.className='typing';
+      td.innerHTML='<div class="td"></div><div class="td"></div><div class="td"></div>';
+      container.appendChild(td);container.scrollTop=9999;
+      setTimeout(()=>td.classList.add('show'),20);
+      setTimeout(()=>{td.remove();idx++;next();},1200);return;
+    }
+
+    const el=document.createElement('div');
+    el.className='m '+(m.t==='u'?'u':'b');
+
+    if(m.voice){
+      el.classList.add('voice-m');
+      const bars=[40,80,60,100,50,70,40,90,55].map((h,i)=>
+        `<div class="vb" style="height:${h}%;animation:vw 1s ${i*.09}s infinite alternate;"></div>`).join('');
+      el.innerHTML=`<div class="vplay">▶</div><div class="vbars">${bars}</div><div class="vdur">0:08</div>`;
+    } else {
+      el.innerHTML=fmtText(m.text||'');
+    }
+
+    const mt=document.createElement('div');
+    mt.className='mt';mt.textContent=tc;el.appendChild(mt);
+    container.appendChild(el);container.scrollTop=9999;
+    setTimeout(()=>el.classList.add('show'),20);
+    idx++;
+    const nxt=msgs[idx];
+    setTimeout(next,nxt?(nxt.delay-m.delay):3000);
+  }
+
+  setTimeout(next,msgs[0].delay);
+</script>
+</body>
+</html>
