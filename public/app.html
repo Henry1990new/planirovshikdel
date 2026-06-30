@@ -259,9 +259,14 @@
   <div class="login-card">
     <div class="login-icon">📋</div>
     <div class="login-title">Мои задачи</div>
-    <div class="login-sub">Введите пароль для доступа</div>
+    <div class="login-sub">Узнай свой Telegram ID командой /webapp в боте</div>
     <div class="login-err" id="login-err"></div>
     <div class="inp-wrap">
+      <label class="inp-label">Telegram ID</label>
+      <input type="number" class="inp" id="uid-input" placeholder="302854193" inputmode="numeric">
+    </div>
+    <div class="inp-wrap">
+      <label class="inp-label">Пароль</label>
       <input type="password" class="inp" id="pwd-input" placeholder="Пароль" autocomplete="current-password">
     </div>
     <button class="btn-primary" id="login-btn">Войти</button>
@@ -389,10 +394,10 @@ function saveToken(t) { TOKEN = t; localStorage.setItem('appToken', t); }
 function clearToken() { TOKEN = ''; localStorage.removeItem('appToken'); }
 function authHeaders() { return { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' }; }
 
-async function tryLogin(pwd) {
+async function tryLogin(token) {
   try {
     const res = await fetch(`${API}?from=${todayStr()}&to=${todayStr()}`, {
-      headers: { Authorization: `Bearer ${pwd}` }
+      headers: { Authorization: `Bearer ${token}` }
     });
     return res.ok;
   } catch { return false; }
@@ -402,24 +407,28 @@ async function tryLogin(pwd) {
 const loginScreen = document.getElementById('login-screen');
 const appEl = document.getElementById('app');
 const loginErr = document.getElementById('login-err');
+const uidInput = document.getElementById('uid-input');
 const pwdInput = document.getElementById('pwd-input');
 const loginBtn = document.getElementById('login-btn');
 
 loginBtn.addEventListener('click', doLogin);
 pwdInput.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+uidInput.addEventListener('keydown', e => { if (e.key === 'Enter') pwdInput.focus(); });
 
 async function doLogin() {
+  const uid = uidInput.value.trim();
   const pwd = pwdInput.value.trim();
-  if (!pwd) return;
+  if (!uid || !pwd) { loginErr.textContent = 'Введите ID и пароль'; return; }
   loginBtn.disabled = true;
   loginBtn.textContent = 'Проверяю...';
   loginErr.textContent = '';
-  const ok = await tryLogin(pwd);
+  const token = `${uid}:${pwd}`;
+  const ok = await tryLogin(token);
   if (ok) {
-    saveToken(pwd);
+    saveToken(token);
     showApp();
   } else {
-    loginErr.textContent = 'Неверный пароль';
+    loginErr.textContent = 'Неверный ID или пароль';
     loginBtn.disabled = false;
     loginBtn.textContent = 'Войти';
   }

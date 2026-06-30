@@ -2,8 +2,17 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { env } from '../lib/env';
 import { getTasksRange, insertTask, updateTaskById, deleteTaskById } from '../lib/db';
 
-function checkAuth(req: VercelRequest): boolean {
-  return req.headers.authorization === `Bearer ${env.WEB_PASSWORD}`;
+// Token format: Bearer {telegramUserId}:{WEB_PASSWORD}
+function parseAuth(req: VercelRequest): number | null {
+  const auth = req.headers.authorization ?? '';
+  if (!auth.startsWith('Bearer ')) return null;
+  const token = auth.slice(7);
+  const sep = token.indexOf(':');
+  if (sep === -1) return null;
+  const userId = parseInt(token.slice(0, sep), 10);
+  const password = token.slice(sep + 1);
+  if (isNaN(userId) || password !== env.WEB_PASSWORD) return null;
+  return userId;
 }
 
 function today(): string {
@@ -16,10 +25,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!checkAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
 
-  const userId = parseInt(env.WEB_USER_ID, 10);
-  if (isNaN(userId)) return res.status(500).json({ error: 'WEB_USER_ID не настроен' });
+  const userId = parseAuth(req);
+  if (userId === null) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
     if (req.method === 'GET') {

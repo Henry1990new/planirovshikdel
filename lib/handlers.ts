@@ -35,7 +35,8 @@ export async function handleStart(chatId: number): Promise<void> {
     '/tasks — список задач\n' +
     '/done <id> — отметить задачу выполненной\n' +
     '/move_overdue — перенести просроченные на сегодня\n' +
-    '/clear — очистить задачи на сегодня',
+    '/clear — очистить задачи на сегодня\n' +
+    '/webapp — доступ к веб-приложению',
   );
 }
 
@@ -72,6 +73,16 @@ export async function handleWeek(chatId: number, userId: number): Promise<void> 
     return;
   }
   await sendMessage(chatId, formatTasksWeek(tasks, todayStr));
+}
+
+export async function handleWebApp(chatId: number, userId: number): Promise<void> {
+  await sendMessage(
+    chatId,
+    '🌐 Веб-приложение:\nhttps://planirovshikdel.vercel.app/app.html\n\n' +
+    `Твой Telegram ID: ${userId}\n` +
+    'Пароль: попроси у владельца бота\n\n' +
+    'Введи ID и пароль на странице входа — увидишь свои задачи.',
+  );
 }
 
 export async function handleMoveOverdue(chatId: number, userId: number): Promise<void> {

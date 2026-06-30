@@ -11,7 +11,6 @@ export const env = {
   get SUPABASE_URL() { return getEnv('SUPABASE_URL'); },
   get SUPABASE_SERVICE_ROLE_KEY() { return getEnv('SUPABASE_SERVICE_ROLE_KEY'); },
   get WEB_PASSWORD() { return getEnv('WEB_PASSWORD'); },
-  get WEB_USER_ID() { return getEnv('WEB_USER_ID'); },
   get CRON_SECRET() { return getEnv('CRON_SECRET'); },
   get TZ_OFFSET_HOURS() { return getEnv('TZ_OFFSET_HOURS'); },
 };
