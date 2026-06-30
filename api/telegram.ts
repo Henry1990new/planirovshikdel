@@ -3,6 +3,8 @@ import { env } from '../lib/env';
 import {
   handleStart,
   handleToday,
+  handleTomorrow,
+  handleWeek,
   handleDone,
   handleClear,
   handleVoice,
@@ -59,6 +61,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await handleStart(chatId);
     } else if (text.startsWith('/today')) {
       await handleToday(chatId, userId);
+    } else if (text.startsWith('/tomorrow')) {
+      await handleTomorrow(chatId, userId);
+    } else if (text.startsWith('/week')) {
+      await handleWeek(chatId, userId);
     } else if (text.startsWith('/done')) {
       await handleDone(chatId, userId, text.slice(5));
     } else if (text.startsWith('/clear')) {

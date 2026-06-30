@@ -10,4 +10,6 @@ export const env = {
   get GROQ_API_KEY() { return getEnv('GROQ_API_KEY'); },
   get SUPABASE_URL() { return getEnv('SUPABASE_URL'); },
   get SUPABASE_SERVICE_ROLE_KEY() { return getEnv('SUPABASE_SERVICE_ROLE_KEY'); },
+  get WEB_PASSWORD() { return getEnv('WEB_PASSWORD'); },
+  get WEB_USER_ID() { return getEnv('WEB_USER_ID'); },
 };

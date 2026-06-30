@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DelovyeDela — утренний планировщик</title>
-  <meta name="description" content="Telegram-бот для утреннего планирования. Голос или текст → задачи с ИИ. Whisper + Llama + Supabase.">
+  <title>DelovyeDela — ежедневный планировщик</title>
+  <meta name="description" content="Telegram-бот для ежедневного планирования. Голос или текст → задачи с ИИ. Whisper + Llama + Supabase.">
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     html{scroll-behavior:smooth;}
@@ -252,7 +252,10 @@
     <div class="logo-icon">🌅</div>
     DelovyeDela
   </div>
-  <a href="https://t.me/deloviedela_bot" class="nav-pill" target="_blank">Открыть бота →</a>
+  <div style="display:flex;gap:8px">
+    <a href="/app.html" class="nav-pill" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);box-shadow:none;">Мои задачи</a>
+    <a href="https://t.me/deloviedela_bot" class="nav-pill" target="_blank">Открыть бота →</a>
+  </div>
 </nav>
 
 <!-- Hero -->
@@ -261,11 +264,11 @@
     <div class="badge-dot"></div>
     Бот работает · @deloviedela_bot
   </div>
-  <h1>Твой&nbsp;<span class="grad-text">утренний</span><br>планировщик</h1>
+  <h1>Твой&nbsp;<span class="grad-text">ежедневный</span><br>планировщик</h1>
   <p class="hero-desc">Говори или пиши — бот разберёт планы на задачи с помощью ИИ и сохранит в базу. Голос распознаёт Whisper, думает Llama.</p>
   <div class="ctas">
     <a href="https://t.me/deloviedela_bot" class="btn-p" target="_blank">✈️&nbsp; Открыть в Telegram</a>
-    <a href="https://github.com/Henry1990new/planirovshikdel" class="btn-s" target="_blank">⌥&nbsp; Исходный код</a>
+    <a href="/app.html" class="btn-s">📋&nbsp; Мои задачи</a>
   </div>
 </div>
 
@@ -320,7 +323,7 @@
 <div class="section">
   <div class="sec-tag">Как работает</div>
   <div class="sec-h">Три шага<br>до готового плана</div>
-  <div class="sec-sub">Утром — надиктовал. Днём — отмечаешь выполненное.</div>
+  <div class="sec-sub">Надиктуй планы на день, неделю или месяц вперёд. Отмечай выполненное.</div>
   <div class="steps">
     <div class="step">
       <div class="step-accent" style="background:linear-gradient(180deg,#7c3aed,#a78bfa);"></div>
