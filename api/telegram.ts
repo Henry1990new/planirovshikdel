@@ -20,25 +20,41 @@ interface TelegramUpdate {
   };
 }
 
+function serializeError(err: unknown): string {
+  if (err instanceof Error) {
+    return `${err.name}: ${err.message}\n${err.stack ?? ''}`;
+  }
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Всегда 200 — иначе Telegram будет слать повторные запросы
   res.status(200).json({ ok: true });
 
   if (req.method !== 'POST') return;
 
-  // Проверяем webhook-секрет
-  const secret = req.headers['x-telegram-bot-api-secret-token'];
-  if (secret !== env.TELEGRAM_WEBHOOK_SECRET) return;
-
-  const update = req.body as TelegramUpdate;
-  const message = update?.message;
-  if (!message) return;
-
-  const chatId = message.chat.id;
-  const userId = message.from?.id ?? chatId;
-  const text = message.text ?? '';
-
   try {
+    // Проверяем webhook-секрет
+    const secret = req.headers['x-telegram-bot-api-secret-token'];
+    if (secret !== env.TELEGRAM_WEBHOOK_SECRET) {
+      console.log('Неверный секрет, пропускаем');
+      return;
+    }
+
+    const update = req.body as TelegramUpdate;
+    const message = update?.message;
+    if (!message) return;
+
+    const chatId = message.chat.id;
+    const userId = message.from?.id ?? chatId;
+    const text = message.text ?? '';
+
+    console.log(`update: chatId=${chatId} userId=${userId} text=${JSON.stringify(text)} voice=${!!message.voice}`);
+
     if (text.startsWith('/start')) {
       await handleStart(chatId);
     } else if (text.startsWith('/today')) {
@@ -55,11 +71,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await handleText(chatId, userId, text);
     }
   } catch (err) {
-    console.error('Ошибка обработки update:', JSON.stringify(err));
+    console.error('Ошибка обработки update:', serializeError(err));
+    // chatId может быть недоступен если ошибка произошла до его извлечения
     try {
-      await sendMessage(chatId, 'Произошла ошибка. Попробуй позже.');
+      const chatId = (req.body as TelegramUpdate)?.message?.chat?.id;
+      if (chatId) await sendMessage(chatId, 'Произошла ошибка. Попробуй позже.');
     } catch {
-      // игнорируем ошибки при отправке сообщения об ошибке
+      // игнорируем
     }
   }
 }
