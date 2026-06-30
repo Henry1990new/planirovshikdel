@@ -72,8 +72,8 @@ export function formatAllTasks(
   }
 
   for (const [day, dayTasks] of [...byDay.entries()].sort()) {
-    const [, m, d] = parseDateUTC(day);
-    const dt = new Date(Date.UTC(...parseDateUTC(day)));
+    const [y, m, d] = parseDateUTC(day);
+    const dt = new Date(Date.UTC(y, m - 1, d));
     const label = `${d} ${MONTHS_FULL[m - 1]} — ${DAY_NAMES[dt.getUTCDay()]}`;
     lines.push(`${label} (${dayTasks.length}):`);
     for (const t of dayTasks) lines.push(taskLine(t, '•'));
@@ -109,7 +109,8 @@ export function formatTasksWeek(tasks: DbTask[], todayStr: string): string {
   const lines = ['Задачи на неделю:\n'];
   for (const [day, dayTasks] of [...byDay.entries()].sort()) {
     const [, m, d] = parseDateUTC(day);
-    const dt = new Date(Date.UTC(...parseDateUTC(day)));
+    const [y2, , ] = parseDateUTC(day);
+    const dt = new Date(Date.UTC(y2, m - 1, d));
     const label = day === todayStr
       ? `Сегодня, ${d} ${MONTHS_SHORT[m - 1]}`
       : `${DAY_NAMES_SHORT[dt.getUTCDay()]} ${d} ${MONTHS_SHORT[m - 1]}`;

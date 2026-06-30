@@ -334,7 +334,12 @@ let selectedDay = '';
 let editTaskId = null;
 let weekTasks = {};
 
-function fmt(d) { return d.toISOString().slice(0, 10); }
+function fmt(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 function todayStr() { return fmt(new Date()); }
 
 function getWeekStart(offset) {
