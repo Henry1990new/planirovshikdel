@@ -7,11 +7,15 @@ function apiUrl(method: string): string {
 export async function sendMessage(chatId: number, text: string): Promise<void> {
   // Обрезаем длинные сообщения и не используем parse_mode во избежание HTML-ошибок
   const safeText = text.length > 1000 ? text.slice(0, 997) + '...' : text;
-  await fetch(apiUrl('sendMessage'), {
+  const res = await fetch(apiUrl('sendMessage'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chat_id: chatId, text: safeText }),
   });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Telegram sendMessage ${res.status}: ${body}`);
+  }
 }
 
 export async function getFileUrl(fileId: string): Promise<string> {
