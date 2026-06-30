@@ -60,10 +60,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await handleStart(chatId);
     } else if (text.startsWith('/task') || text.startsWith('/today')) {
       await handleToday(chatId, userId);
-    } else if (text.startsWith('/tomorrow')) {
-      await handleTomorrow(chatId, userId);
-    } else if (text.startsWith('/week')) {
-      await handleWeek(chatId, userId);
     } else if (text.startsWith('/move_overdue')) {
       await handleMoveOverdue(chatId, userId);
     } else if (text.startsWith('/done')) {
