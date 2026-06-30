@@ -5,6 +5,7 @@ import {
   handleToday,
   handleTomorrow,
   handleWeek,
+  handleMoveOverdue,
   handleDone,
   handleClear,
   handleVoice,
@@ -38,8 +39,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ ok: true });
   }
 
-  // Сначала обрабатываем — только потом возвращаем 200.
-  // Если вернуть 200 раньше, Vercel может убить функцию до завершения async-работы.
   try {
     const secret = req.headers['x-telegram-bot-api-secret-token'];
     if (secret !== env.TELEGRAM_WEBHOOK_SECRET) {
@@ -65,6 +64,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await handleTomorrow(chatId, userId);
     } else if (text.startsWith('/week')) {
       await handleWeek(chatId, userId);
+    } else if (text.startsWith('/move_overdue')) {
+      await handleMoveOverdue(chatId, userId);
     } else if (text.startsWith('/done')) {
       await handleDone(chatId, userId, text.slice(5));
     } else if (text.startsWith('/clear')) {
@@ -88,6 +89,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // Всегда возвращаем 200 — Telegram не будет ретраить
   return res.status(200).json({ ok: true });
 }

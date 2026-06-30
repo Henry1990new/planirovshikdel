@@ -1,24 +1,25 @@
 import { sendMessage, getFileUrl } from './telegram';
 import { transcribeAudio } from './transcribe';
 import { extractTasks, Task } from './llm';
-import { saveTasks, getTasks, getTasksRange, markDone, clearTasks } from './db';
-import { formatTasks, formatTasksWeek } from './format';
+import { saveTasks, getTasks, getTasksRange, getOverdueTasks, moveOverdueTasks, markDone, clearTasks } from './db';
+import { formatTasksWithOverdue, formatTasks, formatTasksWeek } from './format';
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
 function addDays(date: string, n: number): string {
-  const d = new Date(date);
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 }
 
 function dateLabel(date: string, todayStr: string): string {
   if (date === todayStr) return 'Сегодня';
   if (date === addDays(todayStr, 1)) return 'Завтра';
-  const d = new Date(date);
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  const [y, m, d] = date.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const months = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  return `${d} ${months[m - 1]}`;
 }
 
 export async function handleStart(chatId: number): Promise<void> {
@@ -35,20 +36,28 @@ export async function handleStart(chatId: number): Promise<void> {
     '/tomorrow — задачи на завтра\n' +
     '/week — задачи на ближайшую неделю\n' +
     '/done <id> — отметить задачу выполненной\n' +
+    '/move_overdue — перенести просроченные на сегодня\n' +
     '/clear — очистить задачи на сегодня',
   );
 }
 
 export async function handleToday(chatId: number, userId: number): Promise<void> {
-  const tasks = await getTasks(userId, today());
-  await sendMessage(chatId, formatTasks(tasks));
+  const todayStr = today();
+  const [tasks, overdue] = await Promise.all([
+    getTasks(userId, todayStr),
+    getOverdueTasks(userId, todayStr),
+  ]);
+  await sendMessage(chatId, formatTasksWithOverdue(tasks, overdue, todayStr));
 }
 
 export async function handleTomorrow(chatId: number, userId: number): Promise<void> {
   const tomorrow = addDays(today(), 1);
   const tasks = await getTasks(userId, tomorrow);
-  const d = new Date(tomorrow);
-  const label = d.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+  const [y, m, d] = tomorrow.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const days = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+  const months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  const label = `${days[dt.getUTCDay()]}, ${d} ${months[m - 1]}`;
   if (tasks.length === 0) {
     await sendMessage(chatId, `Задач на завтра (${label}) нет.\n\nНадиктуй или напиши планы на завтра.`);
     return;
@@ -64,6 +73,17 @@ export async function handleWeek(chatId: number, userId: number): Promise<void> 
     return;
   }
   await sendMessage(chatId, formatTasksWeek(tasks, todayStr));
+}
+
+export async function handleMoveOverdue(chatId: number, userId: number): Promise<void> {
+  const todayStr = today();
+  const count = await moveOverdueTasks(userId, todayStr, todayStr);
+  if (count === 0) {
+    await sendMessage(chatId, 'Просроченных задач нет.');
+    return;
+  }
+  const suffix = count === 1 ? 'а' : count < 5 ? 'ы' : '';
+  await sendMessage(chatId, `Перенесено ${count} задач${suffix} на сегодня. /tasks`);
 }
 
 export async function handleDone(chatId: number, userId: number, args: string): Promise<void> {
@@ -105,7 +125,6 @@ async function processPlanText(chatId: number, userId: number, text: string): Pr
 
   await saveTasks(userId, tasks, todayStr);
 
-  // Группируем по дате для красивого вывода
   const groups = new Map<string, Task[]>();
   for (const t of tasks) {
     const d = t.date ?? todayStr;
@@ -124,6 +143,6 @@ async function processPlanText(chatId: number, userId: number, text: string): Pr
     }
   }
 
-  lines.push('\n/today — сегодня  /week — неделя');
+  lines.push('\n/tasks — сегодня  /week — неделя');
   await sendMessage(chatId, lines.join('\n'));
 }

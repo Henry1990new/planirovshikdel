@@ -9,6 +9,7 @@ export interface DbTask {
   time: string | null;
   day: string;
   done: boolean;
+  reminded: boolean;
   created: string;
 }
 
@@ -28,6 +29,7 @@ export async function saveTasks(userId: number, tasks: Task[], defaultDay: strin
     time: t.time ?? null,
     day: t.date ?? defaultDay,
     done: false,
+    reminded: false,
   }));
   const { error } = await getClient().from('tasks').insert(rows);
   if (error) throw new Error(JSON.stringify(error));
@@ -62,7 +64,7 @@ export async function getTasksRange(userId: number, from: string, to: string): P
 export async function insertTask(userId: number, text: string, time: string | null, day: string): Promise<DbTask> {
   const { data, error } = await getClient()
     .from('tasks')
-    .insert({ user_id: userId, text, time, day, done: false })
+    .insert({ user_id: userId, text, time, day, done: false, reminded: false })
     .select()
     .single();
   if (error) throw new Error(JSON.stringify(error));
@@ -116,4 +118,65 @@ export async function deleteTaskById(userId: number, id: number): Promise<boolea
     .eq('user_id', userId);
   if (error) throw new Error(JSON.stringify(error));
   return (count ?? 0) > 0;
+}
+
+// ── Напоминания ──
+
+export async function getUnremindedTasksForDay(day: string): Promise<DbTask[]> {
+  const { data, error } = await getClient()
+    .from('tasks')
+    .select('*')
+    .eq('day', day)
+    .eq('done', false)
+    .eq('reminded', false)
+    .not('time', 'is', null);
+  if (error) throw new Error(JSON.stringify(error));
+  return (data ?? []) as DbTask[];
+}
+
+export async function markReminded(id: number): Promise<void> {
+  const { error } = await getClient()
+    .from('tasks')
+    .update({ reminded: true })
+    .eq('id', id);
+  if (error) throw new Error(JSON.stringify(error));
+}
+
+// ── Просроченные ──
+
+export async function getOverdueTasks(userId: number, beforeDay: string): Promise<DbTask[]> {
+  const { data, error } = await getClient()
+    .from('tasks')
+    .select('*')
+    .eq('user_id', userId)
+    .lt('day', beforeDay)
+    .eq('done', false)
+    .order('day', { ascending: false })
+    .order('time', { ascending: true, nullsFirst: false });
+  if (error) throw new Error(JSON.stringify(error));
+  return (data ?? []) as DbTask[];
+}
+
+export async function moveOverdueTasks(userId: number, beforeDay: string, toDay: string): Promise<number> {
+  const { error, count } = await getClient()
+    .from('tasks')
+    .update({ day: toDay, reminded: false })
+    .eq('user_id', userId)
+    .lt('day', beforeDay)
+    .eq('done', false);
+  if (error) throw new Error(JSON.stringify(error));
+  return count ?? 0;
+}
+
+export async function getAllOverdueTasks(beforeDay: string): Promise<DbTask[]> {
+  const { data, error } = await getClient()
+    .from('tasks')
+    .select('*')
+    .lt('day', beforeDay)
+    .eq('done', false)
+    .order('user_id', { ascending: true })
+    .order('day', { ascending: false })
+    .order('time', { ascending: true, nullsFirst: false });
+  if (error) throw new Error(JSON.stringify(error));
+  return (data ?? []) as DbTask[];
 }
