@@ -1,8 +1,8 @@
 import { sendMessage, getFileUrl } from './telegram';
 import { transcribeAudio } from './transcribe';
 import { extractTasks, Task } from './llm';
-import { saveTasks, getTasks, getTasksRange, getOverdueTasks, moveOverdueTasks, markDone, clearTasks } from './db';
-import { formatTasksWithOverdue, formatTasks, formatTasksWeek } from './format';
+import { saveTasks, getTasks, getTasksRange, getUpcomingTasks, getOverdueTasks, moveOverdueTasks, markDone, clearTasks } from './db';
+import { formatAllTasks, formatTasks, formatTasksWeek } from './format';
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -41,11 +41,12 @@ export async function handleStart(chatId: number): Promise<void> {
 
 export async function handleToday(chatId: number, userId: number): Promise<void> {
   const todayStr = today();
-  const [tasks, overdue] = await Promise.all([
+  const [todayTasks, futureTasks, overdue] = await Promise.all([
     getTasks(userId, todayStr),
+    getUpcomingTasks(userId, todayStr),
     getOverdueTasks(userId, todayStr),
   ]);
-  await sendMessage(chatId, formatTasksWithOverdue(tasks, overdue, todayStr));
+  await sendMessage(chatId, formatAllTasks(todayTasks, futureTasks, overdue, todayStr));
 }
 
 export async function handleTomorrow(chatId: number, userId: number): Promise<void> {

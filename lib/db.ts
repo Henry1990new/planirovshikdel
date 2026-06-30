@@ -120,6 +120,19 @@ export async function deleteTaskById(userId: number, id: number): Promise<boolea
   return (count ?? 0) > 0;
 }
 
+export async function getUpcomingTasks(userId: number, afterDay: string): Promise<DbTask[]> {
+  const { data, error } = await getClient()
+    .from('tasks')
+    .select('*')
+    .eq('user_id', userId)
+    .gt('day', afterDay)
+    .eq('done', false)
+    .order('day', { ascending: true })
+    .order('time', { ascending: true, nullsFirst: false });
+  if (error) throw new Error(JSON.stringify(error));
+  return (data ?? []) as DbTask[];
+}
+
 // ── Напоминания ──
 
 export async function getUnremindedTasksForDay(day: string): Promise<DbTask[]> {
