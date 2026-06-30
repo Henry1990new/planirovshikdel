@@ -3,9 +3,5 @@
     "api/telegram.ts": { "maxDuration": 30 },
     "api/remind.ts":   { "maxDuration": 10 },
     "api/daily.ts":    { "maxDuration": 10 }
-  },
-  "crons": [
-    { "path": "/api/remind", "schedule": "*/5 * * * *" },
-    { "path": "/api/daily",  "schedule": "0 6 * * *" }
-  ]
+  }
 }
