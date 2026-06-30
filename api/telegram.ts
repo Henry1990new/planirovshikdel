@@ -58,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (text.startsWith('/start')) {
       await handleStart(chatId);
-    } else if (text.startsWith('/tasks') || text.startsWith('/today')) {
+    } else if (text.startsWith('/task') || text.startsWith('/today')) {
       await handleToday(chatId, userId);
     } else if (text.startsWith('/tomorrow')) {
       await handleTomorrow(chatId, userId);
