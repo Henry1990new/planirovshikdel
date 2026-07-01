@@ -17,8 +17,14 @@ function dateLabel(day: string, todayStr: string): string {
   return `${DAY_NAMES[dt.getUTCDay()]} ${d} ${MONTH_NAMES[m - 1]}`;
 }
 
+function isAuthorized(req: VercelRequest): boolean {
+  if (req.headers.authorization === `Bearer ${env.CRON_SECRET}`) return true;
+  if (req.query.secret === env.CRON_SECRET) return true;
+  return false;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.headers.authorization !== `Bearer ${env.CRON_SECRET}`) {
+  if (!isAuthorized(req)) {
     return res.status(401).end();
   }
 

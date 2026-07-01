@@ -3,8 +3,14 @@ import { env } from '../lib/env';
 import { getUnremindedTasksForDay, markReminded } from '../lib/db';
 import { sendMessage } from '../lib/telegram';
 
+function isAuthorized(req: VercelRequest): boolean {
+  if (req.headers.authorization === `Bearer ${env.CRON_SECRET}`) return true;
+  if (req.query.secret === env.CRON_SECRET) return true;
+  return false;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.headers.authorization !== `Bearer ${env.CRON_SECRET}`) {
+  if (!isAuthorized(req)) {
     return res.status(401).end();
   }
 
